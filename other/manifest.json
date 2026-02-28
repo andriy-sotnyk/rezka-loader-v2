@@ -1,6 +1,6 @@
 {
     "version": "1.2b",
-    "version_sign": 3,
-    "new_in_release": "Beta release 1.2.0\n\n- Implement feature to enter episode manually",
-    "update_url": "https://github.com/Zaba-web/rezka-loader-v2/releases/download/beta-1-2-1/rezka-loader-v2-1-2-1b.rar"
+    "version_sign": 4,
+    "new_in_release": "Beta release 1.2.1\n\n- Adjust the video files URL parsing logic",
+    "update_url": "https://github.com/andriy-sotnyk/rezka-loader-v2/releases/download/beta-1.2.1/rezka-loader-v-1-2-b.zip"
 }

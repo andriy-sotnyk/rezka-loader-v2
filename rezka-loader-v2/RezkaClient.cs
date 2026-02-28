@@ -1,13 +1,14 @@
-﻿using System;
+﻿using AltoHttp;
+using System;
 using System.Collections.Generic;
-using System.Net.Http;
-using System.Text.Json;
-using AltoHttp;
 using System.IO;
-using System.Windows.Forms;
-using System.Threading;
-using System.Net;
 using System.Linq;
+using System.Net;
+using System.Net.Http;
+using System.Net.Http.Headers;
+using System.Text.Json;
+using System.Threading;
+using System.Windows.Forms;
 
 namespace rezka_loader_v2
 {
@@ -74,6 +75,10 @@ namespace rezka_loader_v2
             }
 
             var content = new FormUrlEncodedContent(requestBody);
+
+            content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
+
+            content.Headers.ContentType.CharSet = "UTF-8";
 
             var response = client.PostAsync(domain + REZKA_GET_CDN_URL, content).Result;
             var responseString = response.Content.ReadAsStringAsync().Result;

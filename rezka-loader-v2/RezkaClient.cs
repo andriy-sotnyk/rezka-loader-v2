@@ -15,7 +15,7 @@ namespace rezka_loader_v2
     internal class RezkaClient
     {
         private HttpClient client;
-        public static String domain = "https://rezka.ag";
+        public static String domain = "https://rezka-tv.org";
         private const string REZKA_SEARCH_URL = "/search/?do=search&subaction=search&q=";
         private const string REZKA_GET_CDN_URL = "/ajax/get_cdn_series/";
         private static string HOMEPAGE_URL = domain;
@@ -23,7 +23,7 @@ namespace rezka_loader_v2
         public RezkaClient()
         {
             this.client = new HttpClient(new HttpClientHandler{AutomaticDecompression = System.Net.DecompressionMethods.GZip});
-            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/81.0.4044.138 Safari/537.36");
+            client.DefaultRequestHeaders.Add("User-Agent", "PostmanRuntime/7.51.1");
         }
 
         public String search(String request)
@@ -77,10 +77,12 @@ namespace rezka_loader_v2
             var content = new FormUrlEncodedContent(requestBody);
 
             content.Headers.ContentType = new MediaTypeHeaderValue("application/x-www-form-urlencoded");
-
+            
             content.Headers.ContentType.CharSet = "UTF-8";
 
-            var response = client.PostAsync(domain + REZKA_GET_CDN_URL, content).Result;
+            String full_url = domain + REZKA_GET_CDN_URL;
+
+            var response = client.PostAsync(full_url, content).Result;
             var responseString = response.Content.ReadAsStringAsync().Result;
 
             var responseParsed = JsonSerializer.Deserialize<CDNResponse>(responseString);

@@ -37,7 +37,7 @@ namespace rezka_loader_v2
 
         private void DownloadConfigurationForm_Load(object sender, EventArgs e)
         {
-            MoviePageData data = this.cdnService.GetMovieDownloadOptions(url);
+            MoviePageData data = this.cdnService.GetMovieDownloadOptionsWithSelenium(url);
 
             if (data == null)
             {

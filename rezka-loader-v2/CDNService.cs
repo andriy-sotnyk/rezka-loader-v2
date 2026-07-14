@@ -5,6 +5,10 @@ using System.Text;
 using HtmlAgilityPack;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using OpenQA.Selenium;
+using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Support.UI;
+using SeleniumExtras.WaitHelpers;
 
 namespace rezka_loader_v2
 {
@@ -16,100 +20,128 @@ namespace rezka_loader_v2
             _client = new RezkaClient();
         }
 
-        public MoviePageData GetMovieDownloadOptions(String url)
+        public MoviePageData GetMovieDownloadOptionsWithSelenium(string url)
         {
-            String moviePageHTML = _client.GetMoviePage(url);
+            // Налаштовуємо фоновий режим (headless)
+            ChromeOptions options = new ChromeOptions();
+            //options.AddArgument("--headless");
+           // options.AddArgument("--disable-gpu");
 
-            if (moviePageHTML == null)
+            using (IWebDriver driver = new ChromeDriver(options))
             {
-                return null;
-            }
-
-            HtmlAgilityPack.HtmlDocument html = new HtmlAgilityPack.HtmlDocument();
-            html.LoadHtml(moviePageHTML);
-
-            HtmlNode translatorsContainer = html.DocumentNode.SelectSingleNode("//ul[contains(@class, 'b-translators__list')]");
-            HtmlNode seasonContainer = html.DocumentNode.SelectSingleNode("//ul[contains(@class, 'b-simple_seasons__list')]");
-            HtmlNode episodesContainer = html.DocumentNode.SelectSingleNode("//ul[contains(@class, 'b-simple_episodes__list')]");
-            HtmlNode favContainer = html.DocumentNode.SelectSingleNode("//input[contains(@id, 'post_id')]");
-
-            int movieId = -1;
-            ArrayList availableTranslators = new ArrayList();
-            ArrayList availableSeasons = new ArrayList();
-            ArrayList availableEpisodes = new ArrayList();
-
-            if (translatorsContainer != null)
-            {
-                foreach (HtmlNode translators in translatorsContainer.ChildNodes)
+                try
                 {
-                    if (translators.NodeType == HtmlNodeType.Element)
-                    {
-                        String translatorName = translators.GetAttributeValue("title", "");
-                        String translatorId = translators.GetAttributeValue("data-translator_id", "");
+                    driver.Navigate().GoToUrl(url);
 
-                        availableTranslators.Add(new Translator(translatorName, Int32.Parse(translatorId)));
+                    WebDriverWait wait = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
+
+                    wait.Until(d => d.Title != null && d.Title.Contains("Смотреть"));
+
+                    string pageSource = driver.PageSource;
+
+                    if (string.IsNullOrEmpty(pageSource))
+                    {
+                        return null;
                     }
-                }
-            }
 
-            if (seasonContainer != null)
-            {
-                foreach (HtmlNode season in seasonContainer.ChildNodes)
-                {
-                    if (season.NodeType == HtmlNodeType.Element)
+                    HtmlAgilityPack.HtmlDocument html = new HtmlAgilityPack.HtmlDocument();
+                    html.LoadHtml(pageSource);
+
+                    HtmlNode translatorsContainer = html.DocumentNode.SelectSingleNode("//ul[contains(@class, 'b-translators__list')]");
+                    HtmlNode seasonContainer = html.DocumentNode.SelectSingleNode("//ul[contains(@class, 'b-simple_seasons__list')]");
+                    HtmlNode episodesContainer = html.DocumentNode.SelectSingleNode("//ul[contains(@class, 'b-simple_episodes__list')]");
+                    HtmlNode favContainer = html.DocumentNode.SelectSingleNode("//input[contains(@id, 'post_id')]");
+
+                    int movieId = -1;
+                    ArrayList availableTranslators = new ArrayList();
+                    ArrayList availableSeasons = new ArrayList();
+                    ArrayList availableEpisodes = new ArrayList();
+
+                    if (translatorsContainer != null)
                     {
-                        String seasonNumber = season.InnerText;
-                        String seasonID = season.GetAttributeValue("data-tab_id", "");
-
-                        availableSeasons.Add(new Season(seasonNumber, Int32.Parse(seasonID)));
-                    }
-                }
-            }
-
-            if (episodesContainer != null)
-            {
-                foreach (HtmlNode episode in episodesContainer.ChildNodes)
-                {
-                    if (episode.NodeType == HtmlNodeType.Element)
-                    {
-                        String episodeNumber = episode.InnerText;
-                        String episodeID = episode.GetAttributeValue("data-episode_id", "");
-
-                        availableEpisodes.Add(new Episode(episodeNumber, Int32.Parse(episodeID)));
-                    }
- 
-                }
-            }
-
-            if (favContainer != null)
-            {
-                movieId = Int32.Parse(favContainer.GetAttributeValue("value", "-1"));
-            }
-
-            if (movieId == -1)
-            {
-                return null;
-            }
-
-            if (availableTranslators.Count == 0)
-            {
-                var scriptNodes = html.DocumentNode.SelectNodes("//script");
-                
-                foreach(var node in scriptNodes)
-                {
-                    if (node.InnerHtml.Contains("initCDNMoviesEvents"))
-                    {
-                        var scriptItems = node.InnerHtml.Split(',');
-                        if (scriptItems.Length > 0 && int.TryParse(scriptItems[1], out _))
+                        foreach (HtmlNode translators in translatorsContainer.ChildNodes)
                         {
-                            availableTranslators.Add(new Translator("Default", int.Parse(scriptItems[1])));
-                            break;
+                            if (translators.NodeType == HtmlNodeType.Element)
+                            {
+                                string translatorName = translators.GetAttributeValue("title", "");
+                                string translatorId = translators.GetAttributeValue("data-translator_id", "");
+                                
+                                if (translatorId == "")
+                                {
+                                    HtmlNode a = translators.FirstChild;
+                                    translatorName = a.GetAttributeValue("title", "");
+                                    translatorId = a.GetAttributeValue("data-translator_id", "");
+                                }
+
+                                availableTranslators.Add(new Translator(translatorName, int.Parse(translatorId)));
+                            }
                         }
                     }
+
+                    if (seasonContainer != null)
+                    {
+                        foreach (HtmlNode season in seasonContainer.ChildNodes)
+                        {
+                            if (season.NodeType == HtmlNodeType.Element)
+                            {
+                                string seasonNumber = season.InnerText;
+                                string seasonID = season.GetAttributeValue("data-tab_id", "");
+                                availableSeasons.Add(new Season(seasonNumber, int.Parse(seasonID)));
+                            }
+                        }
+                    }
+
+                    if (episodesContainer != null)
+                    {
+                        foreach (HtmlNode episode in episodesContainer.ChildNodes)
+                        {
+                            if (episode.NodeType == HtmlNodeType.Element)
+                            {
+                                string episodeNumber = episode.InnerText;
+                                string episodeID = episode.GetAttributeValue("data-episode_id", "");
+                                availableEpisodes.Add(new Episode(episodeNumber, int.Parse(episodeID)));
+                            }
+                        }
+                    }
+
+                    if (favContainer != null)
+                    {
+                        movieId = int.Parse(favContainer.GetAttributeValue("value", "-1"));
+                    }
+
+                    if (movieId == -1)
+                    {
+                        return null;
+                    }
+
+                    if (availableTranslators.Count == 0)
+                    {
+                        HtmlNodeCollection scriptNodes = html.DocumentNode.SelectNodes("//script");
+                        if (scriptNodes != null)
+                        {
+                            foreach (HtmlNode node in scriptNodes)
+                            {
+                                if (node.InnerHtml.Contains("initCDNMoviesEvents"))
+                                {
+                                    string[] scriptItems = node.InnerHtml.Split(',');
+                                    if (scriptItems.Length > 1 && int.TryParse(scriptItems[1], out int _))
+                                    {
+                                        availableTranslators.Add(new Translator("Default", int.Parse(scriptItems[1])));
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    return new MoviePageData(availableTranslators, availableSeasons, availableEpisodes, movieId);
+                }
+                catch (Exception)
+                {
+                    // Сюди програма потрапить також у випадку, якщо за 10 секунд тайтл так і не змінився (вилетить WebDriverTimeoutException)
+                    return null;
                 }
             }
-
-            return new MoviePageData(availableTranslators, availableSeasons, availableEpisodes, movieId);
         }
 
         public System.Collections.Generic.Dictionary<string, string> GetCDNLinks(int movieId, int translatorId, int season = -1, int episode = -1)
